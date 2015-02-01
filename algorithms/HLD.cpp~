@@ -1,0 +1,151 @@
+
+const int mn = 20009; // MAX NUMBER OF NODES
+const int lmn = 30; // LG MAX NUMBER OF NODES
+
+/* RANGE TREE INIT */
+
+// TYPE RANGE TREE
+typedef int tt;
+tt input[MAXN]; tt tree[MAXN*17]; tt acum[MAXN*17]; 
+
+// init(1,1,n)
+void init(int node, int b, int e) {
+  acum[node] = 0;
+	if(b == e) tree[node] = input[b];
+	else {
+		int m = (b + e) >> 1, lt = node << 1, rt = lt | 1;
+		init(lt, b, m);
+		init(rt, m+1, e);
+		tree[node] = f(tree[lt], tree[rt]);
+	}
+}
+// query(1,1,N,i,j)
+T query(int node, int b, int e, int i, int j) {
+  int m = (b + e) >> 1, lt = node << 1, rt = lt | 1;
+  
+  tree[node] += acum[node] * (e - b + 1);
+  acum[lt] += acum[node];
+  acum[rt] += acum[node];
+  acum[node] = 0;
+  
+	if(i > e || j < b) return 0;
+	if (i <= b && e <= j) return tree[node];
+	else return f(query(lt, b, m, i, j), query(rt, m+1, e, i, j));
+}
+// modify(1,1,N,i,j,val)
+void modify(int node, int b, int e, int i, int j, int v) {
+  int m = (b + e) >> 1, lt = node << 1, rt = lt | 1;  
+  tree[node] += acum[node] * (e - b + 1);
+  acum[lt] += acum[node];
+  acum[rt] += acum[node];
+  acum[node] = 0;
+  if(i > e || j < b) return;
+	if (i <= b && e <= j) {
+	  tree[node] += v * (e - b + 1);
+	  acum[lt] += v;
+    acum[rt] += v;
+	  return;
+	}
+	modify(lt, b, m, i, j, v);
+	modify(rt, m+1, e, i, j, v);
+	tree[node] = f(tree[lt], tree[rt]);
+}
+/* RANGE TREE END */
+
+
+int n; // Nodes in graph
+vector<int> g[mn]; // Graph (TREE)
+
+/* HEAVY LIGHT INIT */
+int S[mn]; // Subtree node sum;
+int L[mn]; // L is the level of the node
+int T[mn]; // Father of node
+int H[mn]; // Head of the chain
+int CID[mn]; // Chain ID
+int CIDI[mn]; // Chain ID Inverse
+int nid; // CID counter
+
+int dfs(int u, int w){
+  T[u] = w;
+  int v;
+  int sum = 1;
+  for(int i = 0; i < g[u].size(); i++){
+    v = g[u][i];
+    if(v == w) continue;
+    L[v] = L[u]+1; 
+    sum = sum+dfs(v,u);
+  }
+  return S[u] = sum;
+}
+
+void dfs2(int u, int w){
+  CIDI[nid] = u;
+  CID[u] = nid++;
+  vector<pii> ve;
+  
+  int v;
+  for(int i = 0; i < g[u].size(); i++){
+    v = g[u][i];
+    if(v == w) continue;
+    ve.pb(mp(S[v],v));
+  }
+  if(ve.empty()) return;
+  sort(ve.begin(), ve.end());
+  reverse(ve.begin(), ve.end());
+  
+  for(int i = 0; i < ve.size(); i++){
+    v = ve[i].Y;
+    if(i == 0){
+      H[v] = H[u];
+    }else{
+      H[v] = v; 
+    }
+    dfs2(v, u);
+  }
+}
+
+// INIT OF HEAVY LIGHT
+int init(){
+  int init = 0;
+  L[init] = 0;
+  dfs(init,-1);
+  nid = 1;
+  H[init] = init;
+  dfs2(init,-1);
+}
+/* HEAVY LIGHT END */
+
+
+// LCA heavy light 
+int LCA(int p, int q){
+  while(H[p] != H[q]){
+    if(L[H[p]] < L[H[q]]){
+      swap(p,q);
+    } 
+    if(p == H[p]){
+      p = T[p]; 
+    }else{
+      p = H[p];
+    }
+  }
+  
+  if(L[p] > L[q]) return q;
+  return p;
+}
+
+// HL Query on path p to LCA
+tt query(int p, int lca){
+  tt res = tt::neutro();
+  
+  while(H[p] != H[lca]){
+    res = f(res, query(1,1,n, CID[H[p]], CID[p]));
+    p = T[H[p]];
+  }
+  return f(res, query(1,1,n, CID[lca], CID[p]));
+}
+
+// HL Modify node p with value v
+void modify(int p, tt v){
+  modify(1,1,n, CID[p], v);
+}
+
