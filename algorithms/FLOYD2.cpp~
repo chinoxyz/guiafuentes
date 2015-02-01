@@ -1,9 +1,0 @@
-int u, v;
-for(int k = 0; k < n; k++){
-  for(int i = 0; i < m; i++){
-    u = arcos[i].first;
-    v = arcos[i].second;
-      cost[i][j] = min(cost[i][j], cost[i][k] + cost[k][j]);
-    }
-  }
-}
